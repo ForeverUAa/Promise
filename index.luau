@@ -60,17 +60,19 @@ function Promise:_getValues(): ...any return unpack(self._value) end
 function Promise:_executeHandler(handler): ()   
 	local callback = handler[self.State]     	 	 	
 	if callback then
-		local ok, response = pcall(callback, self:_getValues()) 	 	 		  	 		 	
+		local result = table.pack(pcall(callback, self:_getValues()))
+		local ok = result[1]
 		if ok then
+			local response = result[2]
 			if Promise.isPromise(response) then 	
 				response:next( 	
 					function(...) handler.child:resolve(...) end,
 					function(...) handler.child:reject(...) end) 		 	
 			else
-				handler.child:resolve(response) 	
+				handler.child:resolve(unpack(result, 2, result.n))
 			end 		 
 		else    
-			handler.child:reject(response)  
+			handler.child:reject(unpack(result, 2, result.n))
 		end 
 	else
 		if self.State == "fulfilled" then
@@ -159,4 +161,3 @@ return (Promise :: {
 		) -> ()) -> Promise, 		
 	isPromise: (Promise?) -> boolean, 	
 })
-
